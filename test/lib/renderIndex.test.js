@@ -1,4 +1,3 @@
-const chai = require('chai')
 const sinon = require('sinon')
 const rewire = require('rewire')
 const fs = require('fs')
@@ -6,9 +5,6 @@ const path = require('path')
 
 const cssFolder = path.join(__dirname, '..', '..', 'dist', 'static', 'css')
 const jsFolder = path.join(__dirname, '..', '..', 'dist', 'static', 'js')
-
-chai.use(require('sinon-chai'))
-chai.should()
 
 let lastTpl
 let lastOptions
@@ -27,18 +23,20 @@ describe('#renderIndex', () => {
 
     beforeEach(() => {
       renderIndex = rewire('../../lib/renderIndex')
-      renderIndex.__set__('webConfig', {
+
+      jest.mock('../../config/webConfig', () => ({
         base: '/configured/path'
-      })
+      }))
       mockedReaddir = sinon.stub(fs, 'readdirSync')
       mockedReaddir.returns([])
     })
 
     afterEach(() => {
       mockedReaddir.restore()
+      jest.restoreAllMocks()
     })
 
-    it('uses the base from the `X-External-Path` header', () => {
+    test('uses the base from the `X-External-Path` header', () => {
       renderIndex(
         {
           headers: {
@@ -47,17 +45,17 @@ describe('#renderIndex', () => {
         },
         mockResponse
       )
-      return lastOptions.config.base.should.equal('/test/base/')
+      return expect(lastOptions.config.base).toBe('/test/base/')
     })
 
-    it('uses configured value if no header is present', () => {
+    test('uses configured value if no header is present', () => {
       renderIndex(
         {
           headers: {}
         },
         mockResponse
       )
-      lastOptions.config.base.should.equal('/configured/path/')
+      expect(lastOptions.config.base).toEqual('/configured/path/')
     })
   })
 
@@ -74,7 +72,7 @@ describe('#renderIndex', () => {
       mockedReaddir.restore()
     })
 
-    it('When no dist files present it will have empty css and js files', () => {
+    test('When no dist files present it will have empty css and js files', () => {
       mockedReaddir.returns([])
       renderIndex(
         {
@@ -82,27 +80,30 @@ describe('#renderIndex', () => {
         },
         mockResponse
       )
-      lastTpl.should.equal('index.ejs')
-      lastOptions.cssFiles.should.eql([])
-      lastOptions.jsFiles.should.eql([])
+      expect(lastTpl).toBe('index.ejs')
+      expect(lastOptions.cssFiles).toEqual([])
+      expect(lastOptions.jsFiles).toEqual([])
     })
 
-    it('When dist files present will only return the ones with the correct extensions', () => {
-      mockedReaddir
-        .withArgs(cssFolder)
-        .returns(['valid-css.css', 'invalid-css.scss'])
-      mockedReaddir
-        .withArgs(jsFolder)
-        .returns(['valid-js.js', 'invalid-js.map'])
-      renderIndex(
-        {
-          headers: {}
-        },
-        mockResponse
-      )
-      lastTpl.should.equal('index.ejs')
-      lastOptions.cssFiles.should.eql(['static/css/valid-css.css'])
-      lastOptions.jsFiles.should.eql(['static/js/valid-js.js'])
-    })
+    test(
+      'When dist files present will only return the ones with the correct extensions',
+      () => {
+        mockedReaddir
+          .withArgs(cssFolder)
+          .returns(['valid-css.css', 'invalid-css.scss'])
+        mockedReaddir
+          .withArgs(jsFolder)
+          .returns(['valid-js.js', 'invalid-js.map'])
+        renderIndex(
+          {
+            headers: {}
+          },
+          mockResponse
+        )
+        expect(lastTpl).toBe('index.ejs')
+        expect(lastOptions.cssFiles).toEqual(['static/css/valid-css.css'])
+        expect(lastOptions.jsFiles).toEqual(['static/js/valid-js.js'])
+      }
+    )
   })
 })

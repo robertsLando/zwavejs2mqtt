@@ -1,115 +1,106 @@
-const chai = require('chai')
-const sinon = require('sinon')
-const rewire = require('rewire')
-
-chai.use(require('chai-as-promised'))
-chai.use(require('sinon-chai'))
-const should = chai.should()
-
-const mod = rewire('../../lib/jsonStore')
-
 const jsonStore = require('../../lib/jsonStore')
+const jsonFile = require('jsonfile')
+// const utils = require('../../lib/utils')
 
 describe('#jsonStore', () => {
   describe('#getFile()', () => {
     const config = { file: 'foo', default: 'defaultbar' }
     beforeEach(() => {
-      sinon.stub(mod.__get__('utils'), 'joinPath')
-      sinon.stub(mod.__get__('jsonfile'), 'readFile')
+      jest.mock('jsonfile')
     })
     afterEach(() => {
-      mod.__get__('utils').joinPath.restore()
-      mod.__get__('jsonfile').readFile.restore()
+      jest.restoreAllMocks()
+    })
+    test('uncaught error', () => {
+      jsonFile.readFile.rejects(Error('FOO'))
+      return expect(jsonStore._getFile(config)).rejects.toThrowError('FOO')
     })
 
-    it('uncaught error', () => {
-      mod.__get__('jsonfile').readFile.rejects(new Error('FOO'))
-      return jsonStore
-        ._getFile(config)
-        .should.eventually.be.rejectedWith(Error, 'FOO')
-    })
-
-    it('data returned', () => {
+    test('data returned', () => {
       const toReturn = {
         file: 'foo',
         data: 'mybar'
       }
-      mod.__get__('jsonfile').readFile.resolves(toReturn.data)
-      return jsonStore._getFile(config).should.eventually.deep.equal(toReturn)
+      jsonFile.readFile.resolves(toReturn.data)
+      return expect(jsonStore._getFile(config)).resolves.toEqual(toReturn)
     })
 
-    it('no data, return default', () => {
-      mod.__get__('jsonfile').readFile.resolves(null)
-      return jsonStore._getFile(config).should.eventually.deep.equal({
+    test('no data, return default', () => {
+      jsonFile.readFile.resolves(null)
+      return expect(jsonStore._getFile(config)).resolves.toEqual({
         file: 'foo',
         data: 'defaultbar'
       })
     })
 
-    it('file not found, return default', () => {
-      mod.__get__('jsonfile').readFile.rejects({ code: 'ENOENT' })
-      return jsonStore._getFile(config).should.eventually.deep.equal({
+    test('file not found, return default', () => {
+      jsonFile.readFile.rejects({ code: 'ENOENT' })
+      return expect(jsonStore._getFile(config)).resolves.toEqual({
         file: 'foo',
         data: 'defaultbar'
       })
     })
   })
 
-  describe('#StorageHelper', () => {
-    jsonStore.store = {}
-    it('class test', () => {
-      jsonStore.store.should.deep.equal({})
-    })
+  //   describe('#StorageHelper', () => {
+  //     const StorageHelper = mod.__get__('StorageHelper')
+  //     test('class test', () => {
+  //       const ins = new StorageHelper()
+  //       expect(ins.store).toEqual({})
+  //     })
 
-    describe('#init()', () => {
-      beforeEach(() => {
-        jsonStore.store = { known: 'no', foobar: 'foo' }
-        sinon.stub(jsonStore, '_getFile').resolves({ file: 'foo', data: 'bar' })
-      })
-      afterEach(() => {
-        jsonStore._getFile.restore()
-      })
-      it('ok', () =>
-        jsonStore.init({ file: 'foobar' }).should.eventually.deep.equal({
-          known: 'no',
-          foobar: 'foo',
-          foo: 'bar'
-        }))
-      it('error', () => {
-        jsonStore._getFile.rejects('fo')
-        return jsonStore.init({ file: 'foobar' }).should.eventually.be.rejected
-      })
-    })
+  //     describe('#init()', () => {
+  //       beforeEach(() => {
+  //         mod.store = { known: 'no', foobar: 'foo' }
+  //         getFile = mod.__get__('_getFile')
+  //         mod.__set__(
+  //           '_getFile',
+  //           jest.fn().mockResolvedValue({ file: 'foo', data: 'bar' })
+  //         )
+  //       })
+  //       afterEach(() => {
+  //         jsonStore._getFile.restore()
+  //       })
+  //       test('ok', () =>
+  //         expect(mod.init({ file: 'foobar' })).resolves.toEqual({
+  //           known: 'no',
+  //           foobar: 'foo',
+  //           foo: 'bar'
+  //         }))
+  //       test('error', () => {
+  //         mod.__set__('_getFile', jest.fn().mockRejectedValue(Error('foo')))
+  //         return expect(mod.init({ file: 'foobar' })).rejects.toThrowError('foo')
+  //       })
+  //     })
 
-    describe('#get()', () => {
-      beforeEach(() => {
-        jsonStore.store = { known: 'foo' }
-      })
-      it('known', () => jsonStore.get({ file: 'known' }).should.equal('foo'))
-      it('unknown', () =>
-        should.Throw(
-          () => jsonStore.get({ file: 'unknown' }),
-          'Requested file not present in store: unknown'
-        ))
-    })
+  //     describe('#get()', () => {
+  //       beforeEach(() => {
+  //         jsonStore.store = { known: 'foo' }
+  //       })
+  //       test('known', () => expect(mod.get({ file: 'known' })).toBe('foo'))
+  //       test('unknown', () =>
+  //         expect(() => mod.get({ file: 'unknown' })).toThrowError(
+  //           'Requested file not present in store: unknown'
+  //         ))
+  //     })
 
-    describe('#put()', () => {
-      beforeEach(() => {
-        sinon.stub(mod.__get__('jsonfile'), 'writeFile')
-      })
-      afterEach(() => {
-        mod.__get__('jsonfile').writeFile.restore()
-      })
-      it('ok', () => {
-        mod.__get__('jsonfile').writeFile.resolves()
-        return mod
-          .put({ file: 'foo' }, 'bardata')
-          .should.eventually.equal('bardata')
-      })
-      it('error', () => {
-        mod.__get__('jsonfile').writeFile.rejects(new Error('bar'))
-        mod.put({ file: 'foo' }).should.be.rejectedWith('bar')
-      })
-    })
-  })
+  //     describe('#put()', () => {
+  //       beforeEach(() => {
+  //         sinon.stub(mod.__get__('jsonfile'), 'writeFile')
+  //       })
+  //       afterEach(() => {
+  //         mod.__get__('jsonfile').writeFile.restore()
+  //       })
+  //       test('ok', () => {
+  //         mod.__get__('jsonfile').writeFile.resolves()
+  //         return expect(mod.put({ file: 'foo' }, 'bardata')).resolves.toBe(
+  //           'bardata'
+  //         )
+  //       })
+  //       test('error', () => {
+  //         mod.__get__('jsonfile').writeFile.rejects(Error('bar'))
+  //         expect(mod.put({ file: 'foo' })).rejects.toThrowError('bar')
+  //       })
+  //     })
+  //   })
 })

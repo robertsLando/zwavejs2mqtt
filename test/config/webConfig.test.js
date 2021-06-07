@@ -1,47 +1,59 @@
-const chai = require('chai')
-const proxyquire = require('proxyquire')
-
-chai.use(require('sinon-chai'))
-chai.should()
-
 describe('#webConfig', () => {
-  const webConfig = proxyquire('../../config/webConfig', {
-    './app': {}
-  })
+  let webConfig
 
   describe('Uses defaults if nothing specified', () => {
-    it('uses "/" as the default base', () => {
-      webConfig.base.should.equal('/')
+    beforeAll(() => {
+      jest.mock('./app', () => ({}))
+      webConfig = require('../../config/webConfig')
     })
-    it('uses "ZWave To MQTT" as the default title', () => {
-      webConfig.title.should.equal('ZWave To MQTT')
+
+    afterAll(() => {
+      jest.restoreAllMocks()
+    })
+
+    test('uses "/" as the default base', () => {
+      expect(webConfig.base).toBe('/')
+    })
+    test('uses "ZWave To MQTT" as the default title', () => {
+      expect(webConfig.title).toBe('ZWave To MQTT')
     })
   })
   describe('Uses config values when pecified', () => {
-    const webConfig = proxyquire('../../config/webConfig', {
-      './app': {
+    beforeAll(() => {
+      jest.mock('./app', () => ({
         base: '/sub/path/',
         title: 'Custom Title'
-      }
+      }))
+      webConfig = require('../../config/webConfig')
     })
 
-    it('uses "/sub/path/" as the custom base', () => {
-      webConfig.base.should.equal('/sub/path/')
+    afterAll(() => {
+      jest.restoreAllMocks()
     })
 
-    it('uses "Custom Title" as the custom title', () => {
-      webConfig.title.should.equal('Custom Title')
+    test('uses "/sub/path/" as the custom base', () => {
+      expect(webConfig.base).toBe('/sub/path/')
+    })
+
+    test('uses "Custom Title" as the custom title', () => {
+      expect(webConfig.title).toBe('Custom Title')
     })
   })
 
   describe('Path normalization', () => {
-    const webConfig = proxyquire('../../config/webConfig', {
-      './app': {
+    beforeAll(() => {
+      jest.mock('./app', () => ({
         base: '/sub/path'
-      }
+      }))
+      webConfig = require('../../config/webConfig')
     })
-    it('Ensures base paths ends with a slash', () => {
-      webConfig.base.should.equal('/sub/path/')
+
+    afterAll(() => {
+      jest.restoreAllMocks()
+    })
+
+    test('Ensures base paths ends with a slash', () => {
+      expect(webConfig.base).toBe('/sub/path/')
     })
   })
 })
